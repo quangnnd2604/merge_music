@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc/
+
+# Build artifacts
+/dist/
+/build/
+
+# Virtual environment
+.venv/
+virtualenv/
+env/
+
+# IDE and editor files
+.idea/
+.vscode/*
+!.vscode/settings.json
+
+# Results folder
+__results/
+
+# OS generated files
+.DS_Store
+Thumbs.db
