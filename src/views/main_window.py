@@ -15,12 +15,12 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLineEdit, QTextEdit, QProgressBar, QFileDialog,
-    QMessageBox, QTabWidget, QGroupBox
+    QMessageBox, QTabWidget, QGroupBox, QCheckBox, QComboBox
 )
 from PyQt6.QtCore import Qt
 
-from src.utils.package_manager import check_and_install_dependencies
-from src.controllers.media_controller import MediaController
+# Local imports to be deferred
+# from src.controllers.media_controller import MediaController
 from src.utils import helpers
 from src.config import settings
 
@@ -31,7 +31,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Media Mixer")
 
-        # Centralized controller for all business logic
+        # Defer controller import until after dependency checks
+        from src.controllers.media_controller import MediaController
         self.controller = MediaController()
 
         # Basic checks before initializing UI
@@ -94,6 +95,17 @@ class MainWindow(QMainWindow):
         dir_layout.addWidget(browse_btn)
         layout.addLayout(dir_layout)
 
+        # Waveform options
+        waveform_layout = QHBoxLayout()
+        self.dir_waveform_checkbox = QCheckBox("Add audio waveform")
+        self.dir_effect_combo = QComboBox()
+        self.dir_effect_combo.addItems(["Classic Bars", "Gradient Bars"])
+        self.dir_effect_combo.setEnabled(False)
+        self.dir_waveform_checkbox.toggled.connect(self.dir_effect_combo.setEnabled)
+        waveform_layout.addWidget(self.dir_waveform_checkbox)
+        waveform_layout.addWidget(self.dir_effect_combo)
+        layout.addLayout(waveform_layout)
+
         self.start_dir_btn = QPushButton("Start Processing Directory")
         self.start_dir_btn.clicked.connect(self.start_directory_processing)
         self.start_dir_btn.setEnabled(False)
@@ -104,8 +116,9 @@ class MainWindow(QMainWindow):
         """Set up the UI for the single file processing tab."""
         layout = QVBoxLayout(self.tab_single)
 
-        # MP3 selection
+        # Input groups
         mp3_group = QGroupBox("Select MP3 File")
+        # ... (rest of the method is similar)
         mp3_layout = QHBoxLayout(mp3_group)
         self.mp3_input = QLineEdit()
         self.mp3_input.setPlaceholderText("Select an MP3 file...")
@@ -116,7 +129,6 @@ class MainWindow(QMainWindow):
         mp3_layout.addWidget(browse_mp3_btn)
         layout.addWidget(mp3_group)
 
-        # Media source selection
         media_group = QGroupBox("Select Media Source (Image/Video)")
         media_layout = QHBoxLayout(media_group)
         self.media_input = QLineEdit()
@@ -128,7 +140,6 @@ class MainWindow(QMainWindow):
         media_layout.addWidget(browse_media_btn)
         layout.addWidget(media_group)
 
-        # Output directory selection
         output_dir_group = QGroupBox("Select Output Directory")
         output_dir_layout = QHBoxLayout(output_dir_group)
         self.output_dir_input = QLineEdit()
@@ -139,6 +150,17 @@ class MainWindow(QMainWindow):
         output_dir_layout.addWidget(self.output_dir_input)
         output_dir_layout.addWidget(browse_output_dir_btn)
         layout.addWidget(output_dir_group)
+
+        # Waveform options
+        waveform_layout_single = QHBoxLayout()
+        self.single_waveform_checkbox = QCheckBox("Add audio waveform")
+        self.single_effect_combo = QComboBox()
+        self.single_effect_combo.addItems(["Classic Bars", "Gradient Bars"])
+        self.single_effect_combo.setEnabled(False)
+        self.single_waveform_checkbox.toggled.connect(self.single_effect_combo.setEnabled)
+        waveform_layout_single.addWidget(self.single_waveform_checkbox)
+        waveform_layout_single.addWidget(self.single_effect_combo)
+        layout.addLayout(waveform_layout_single)
 
         self.start_single_btn = QPushButton("Start Processing Single File")
         self.start_single_btn.clicked.connect(self.start_single_file_processing)
@@ -161,10 +183,13 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Warning", "Please select an input directory.")
             return
 
+        add_waveform = self.dir_waveform_checkbox.isChecked()
+        effect = self.dir_effect_combo.currentText() if add_waveform else None
+
         self.output_text.clear()
         self.progress_bar.setValue(0)
         self.set_ui_enabled(False)
-        self.controller.process_directory(input_dir)
+        self.controller.process_directory(input_dir, add_waveform=add_waveform, waveform_effect=effect)
 
     def start_single_file_processing(self):
         """Action to start single file processing. Forwards call to controller."""
@@ -176,10 +201,13 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Warning", "Please select an MP3, a media file, and an output directory.")
             return
 
+        add_waveform = self.single_waveform_checkbox.isChecked()
+        effect = self.single_effect_combo.currentText() if add_waveform else None
+
         self.output_text.clear()
         self.progress_bar.setValue(0)
         self.set_ui_enabled(False)
-        self.controller.process_single_pair(mp3_path, media_path, output_dir)
+        self.controller.process_single_pair(mp3_path, media_path, output_dir, add_waveform=add_waveform, waveform_effect=effect)
 
     def on_processing_complete(self, success: bool):
         """Slot to handle completion of a processing task."""
@@ -261,10 +289,6 @@ class MainWindow(QMainWindow):
 
 def run_gui():
     """Initialize and run the GUI application."""
-    if not check_and_install_dependencies():
-        print("Error: Failed to install dependencies.", file=sys.stderr)
-        sys.exit(1)
-        
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     

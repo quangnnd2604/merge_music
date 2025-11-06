@@ -1,106 +1,132 @@
 # Media Mixer
 
-Version: 1.0.0
+Version: 1.1.0
 
-An application that automatically merges MP3 audio files with corresponding MP4 videos or image files (JPG, JPEG, WEBP) from an input directory, creating new MP4 videos with the merged audio.
+An app that automatically merges MP3 audio with matching MP4 videos or images (JPG, JPEG, WEBP, PNG) from an input folder to produce new MP4 videos. Supports both GUI and command-line modes.
 
 ## Features
 
-- Graphical user interface with a clean, tabbed layout
-- **Batch Processing**: Automatically scan an input directory for media files and process all valid pairs.
-- **Single File Processing**: Manually select an MP3, a video/image, and an output directory for a single merge operation.
-- Matches MP3 files with corresponding videos or images by name.
-- Supports MP4 videos and JPG/JPEG/WEBP images.
-- Handles video duration adjustment (looping or trimming) to match audio length.
-- Creates video from static images.
-- Clear progress and error reporting in a log view.
-- Preserves media quality through efficient FFmpeg commands.
+- Clean GUI with two tabs: process directory and process single pair
+- Scans a folder and auto-pairs by matching base names (e.g., `song.mp3` + `song.mp4` or `song.jpg`)
+- Manual single-pair mode: pick MP3 + pick video/image + choose output folder
+- Duration alignment: loops or trims video to match audio length
+- Creates video from a still image
+- Optional audio waveform overlay with effects:
+  - Classic Bars (solid green)
+  - Gradient Bars (blue → magenta → orange)
+- Windows Media Player compatibility: H.264/AVC, yuv420p, Main@4.0, AAC 44.1kHz stereo, faststart
+- Minimal, useful progress logging
 
 ## Requirements
 
 - Python 3.x
-- FFmpeg (must be installed and accessible in the system's PATH)
+- FFmpeg (installed and referenced by configuration)
 
-Required Python packages (will be installed automatically on first run):
+Python packages (auto-installed on first run):
 - moviepy
 - PyQt6
+- librosa
+- Pillow
 
 ## Installation
 
-1.  Ensure Python 3.x is installed on your system.
-2.  Install FFmpeg (see below).
-3.  Run the application. Required Python packages will be installed automatically.
+1) Install Python 3.x
+2) Install FFmpeg
+3) Run the app; missing Python packages will be installed automatically
 
-### Installing FFmpeg
+### Install FFmpeg
 
-- **Windows**:
-  1.  Download a static build from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) (e.g., `ffmpeg-release-full.7z`).
-  2.  Extract the archive to a permanent location (e.g., `C:\ffmpeg`).
-  3.  Add the `bin` folder (e.g., `C:\ffmpeg\bin`) to the system's PATH environment variable.
-- **macOS** (using Homebrew):
-  ```bash
-  brew install ffmpeg
-  ```
-- **Linux** (Debian/Ubuntu):
-  ```bash
-  sudo apt-get update && sudo apt-get install ffmpeg
-  ```
+- Windows:
+  1. Download a static build from https://www.gyan.dev/ffmpeg/builds/
+  2. Extract to a stable location (e.g., `C:\\ffmpeg`)
+  3. Add `C:\\ffmpeg\\bin` to PATH or set the path in `src/config/settings.py`
+- macOS (Homebrew): `brew install ffmpeg`
+- Linux (Debian/Ubuntu): `sudo apt-get update && sudo apt-get install ffmpeg`
+
+## Configuration
+
+- FFmpeg path: set `FFMPEG_PATH` in `src/config/settings.py:20`
+- Supported formats: see `SUPPORTED_*` in `src/config/settings.py`
+- Output folder: `__results` inside the input directory
 
 ## Usage (GUI)
 
-Run the application using the `--gui` flag:
+Launch GUI:
 
 ```bash
 python media_mixer.py --gui
 ```
 
-The application features a tabbed interface for different processing modes.
-
 ### Tab 1: Process Directory
 
-This tab is for batch processing an entire folder.
+1) Click Browse and select the folder with your media
+2) Optionally enable “Add audio waveform” and pick an effect
+3) Click Start to process all pairs
+4) Outputs are saved in the `__results` folder inside your input directory
 
-1.  Click **Browse** and select the main directory containing your media files.
-2.  The application will scan the directory for valid pairs (MP3s and matching video/image files by name).
-3.  Click **Start Processing Directory** to begin.
-4.  The merged files will be saved in a `__results` subfolder inside your selected directory.
-
-**Example Input Directory Structure:**
+Example structure:
 
 ```
 input_folder/
-├── song1.mp3
-├── song1.mp4       # song1.mp3 will be merged with song1.mp4
-├── song2.mp3
-├── song2.webp      # song2.mp3 will be merged with song2.webp
-└── song3.mp3       # song3.mp3 will be ignored (no matching media)
+  song1.mp3
+  song1.mp4       # song1.mp3 will merge with song1.mp4
+  song2.mp3
+  song2.webp      # song2.mp3 will merge with song2.webp
+  song3.mp3       # no matching media → skipped
 ```
 
 ### Tab 2: Process Single File
 
-This tab is for manually merging one audio file with one media file.
-
-1.  **Select MP3 File**: Click **Browse** and choose the MP3 audio file.
-2.  **Select Media Source**: Click **Browse** and choose the video (MP4) or image (JPG, WEBP) file.
-3.  **Select Output Directory**: Click **Browse** and choose the folder where the final video will be saved.
-4.  Click **Start Processing Single File** to begin.
+1) Pick an MP3 file
+2) Pick a media file (MP4 or image JPG/WEBP/PNG)
+3) Choose an output folder
+4) Optionally enable waveform and choose an effect
+5) Click Start to export
 
 ## Usage (Command Line)
 
-For automated scripting, you can run the tool from the command line by providing the input directory path.
+Process a folder:
 
 ```bash
-python media_mixer.py --input_dir /path/to/your/input_folder
+python media_mixer.py --input_dir "C:\\path\\to\\folder"
 ```
 
-## Error Handling
+Note: CLI mode currently does not enable waveform.
 
-Common issues and solutions:
+## Output & Compatibility
 
-- **FFmpeg not found**: Ensure FFmpeg is installed and its location is added to the system's PATH.
-- **File not supported**: Check that your files are in the supported formats (MP3, MP4, JPG, JPEG, WEBP).
-- **Permission issues**: Ensure the application has read/write permissions for the input and output directories.
+- Video: H.264/AVC (`libx264`), `yuv420p`, Main@4.0, `-movflags +faststart`
+- Audio: AAC 192 kbps, stereo (2 channels), 44.1 kHz
+- Frame rate: fixed (30 FPS), CFR
+- Frame size: scaled/padded to `1920x1080` for broad compatibility
+
+## PowerShell Tips (Windows)
+
+- When calling `ffmpeg.exe` with a quoted path, use the call operator `&`:
+
+```powershell
+& "C:\\Windows\\System32\\ffmpeg.exe" -hide_banner -i "C:\\path\\to\\file.mp4"
+```
+
+## Troubleshooting
+
+- FFmpeg not found: install it and update `FFMPEG_PATH` in `src/config/settings.py`
+- Media Player shows “unsupported encoding setting 0x80004005”:
+  - Inspect the file with ffmpeg: `& "C:\\Windows\\System32\\ffmpeg.exe" -hide_banner -i "<file.mp4>"`
+  - Ensure `Video: h264 (Main), yuv420p` and `Audio: aac, 44100 Hz, stereo`
+  - The app uses these compatible settings by default
+- Pair not found: make sure base names match (`After_the_Storm.mp3` + `After_the_Storm.jpg`)
+- Unsupported format: see `SUPPORTED_*` in `src/config/settings.py`
+
+## Architecture (MVC)
+
+- Model: `src/models/media_file.py` — defines `AudioFile`, `VideoFile`, `ImageFile`, `MediaPair`
+- View: `src/views/main_window.py` — GUI (PyQt6)
+- Controller:
+  - `src/controllers/media_controller.py` — scans folders, orchestrates processing, updates progress
+  - `src/controllers/media_processor.py` — performs FFmpeg processing, renders waveform (MoviePy)
+- Utilities: `src/utils/*` — helpers, package install, settings
 
 ## License
 
-This project is open source and available under the MIT License.
+Released under the MIT License.

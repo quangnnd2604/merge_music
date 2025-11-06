@@ -5,7 +5,9 @@ from importlib.metadata import version, PackageNotFoundError
 
 REQUIRED_PACKAGES = {
     'moviepy': 'moviepy',
-    'PyQt6': 'PyQt6'
+    'PyQt6': 'PyQt6',
+    'librosa': 'librosa',
+    'Pillow': 'Pillow'
 }
 
 def check_package(package_name: str) -> bool:
